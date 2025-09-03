@@ -15,6 +15,20 @@ poetry install
 
 # Exploratory Data Analysis
 
+•   Customer ID : Un identifiant pour chaque client
+•   Surname : Le nom de famille du client
+•   Credit Score : Une valeur numérique représentant le score de crédit du client
+•   Geography : Le pays où réside le client (France, Spain ou Germany)
+•   Gender : Le genre du client (Male or Female)
+•   Age : L’âge du client
+•   Tenure : Le nombre d’années pendant lesquelles le client est avec la banque
+•   Balance : Le solde du compte du client
+•   NumOfProducts : Le nombre de produits bancaires utilisés par le client (par exemple, compte d’épargne, carte de crédit)
+•   HasCrCard : Si le client possède une carte de crédit (1 = oui, 0 = non)
+•   IsActiveMember : Si le client est un membre actif (1 = oui, 0 = non)
+•   EstimatedSalary : Le salaire estimé du client
+•   Exited : Si le client a résilié (1 = oui, 0 = non)
+
 ## Checklist de base
 ### Analyse de Forme :
 *   **variable target** : Exited
@@ -61,12 +75,68 @@ poetry install
         - Les clients avec 2 produits sont très fidèles (6% de churn), avec 1 produit (34% de churn) et pour 3 et 4 produits (87% de churn)
             - créé 'NumProductsGroup' 1, 2 ou 3+
         - Les clients inactifs churn plus (30% vs 12%) → Hypothèse à tester
-    * Balance / Age
-    * Balance / Genre
-    * Balance / IsActiveMember
-    * Age / Genre
 
 ## **Conclusion EDA :**
 Les principales variables explicatives du churn semblent être l’**âge** (surtout 45–55 ans), la **balance** (0 vs >0), la **géographie** (spécifiquement l’Allemagne), le **genre**, le **nombre de produits** et l’**activité du client**.
 Certaines variables (CreditScore, Salary, Tenure) n’ont pas montré de relation claire avec la target.
 Les insights obtenus motivent la création de **nouvelles features** (**AgeGroup**, **HasBalance**, **IsGerman**, **NumProductsGroup**) qui seront intégrées dans le pipeline de modélisation.
+
+# Pre-processing
+
+## Encoding
+
+Les variables catégorielles "Gender", "Geography", "NumOfProducts" sont encodées avec la méthode de Target encoding qui consiste à remplacer leur valeurs par leur moyenne de churn (pour "Exited" = 1).
+
+La variable "BalanceCat" est encodée simplement avec un Ordinal Encoder.
+
+## Feature enineering
+
+### "BalanceCat" :
+Cette variable regroupe les clients selon la Balance de leur compte.
+-   0                       : Nulle
+- > 0 à  50000              : Faible
+- > 50000 à 100000          : Moyen
+- > 100000 à 150000         : Normals
+- > 150000 à 200000         : Élevé
+- > 200000 à MAX_Balance    : Très élevé
+
+### ratio_salary_Age = EstimatedSalary / Age
+
+### Active_x_Multi= (IsActiveMember == 1) & (NumOfProducts >= 2)
+
+## Modèle
+
+Le modèle XGBoostClassifier semble être le plus adapté des modèles que j'ai testé. En effet, je l'ai choisi car c'est lui qui généralise le meiux avec le moins d'overfitting et qui donne de meilleur résulatats.
+
+## Evaluation
+score f1 de 0.63
+
+Matrice de confusion :
+
+[[21315  1280]
+ [ 2726  3395]]
+
+![alt text](image.png)
+
+## Optimisation avec RandomSearchCV
+
+subsample : 0.8
+reg_lambda : 9
+reg_alpha : 0.6
+n_estimator : 1040
+min_child_weight : 2
+max_depth : 5
+max_delta_step : 2
+learning_rate : 0.02
+gamma : 1.2
+colsample_bytree : 1
+k_best : all
+tgt__m : 10
+
+threshold : 0.34237288135593225
+F1: 0.6819344524380495
+
+## Résutats
+
+Entraînement sur tout le dataset avec un score f1 de 0.6783317353787153
+Public score : 0.66544
